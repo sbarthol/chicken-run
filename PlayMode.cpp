@@ -21,6 +21,9 @@ Load< MeshBuffer > chicken_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 
 Load< Scene > chicken_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("chicken.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+		if (mesh_name == "Impact") {
+			return;
+		}
 		Mesh const &mesh = chicken_meshes->lookup(mesh_name);
 
 		scene.drawables.emplace_back(transform);
@@ -36,6 +39,35 @@ Load< Scene > chicken_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
+float dist_sqr(float x1, float y1, float x2, float y2) {
+	return (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
+}
+
+void PlayMode::fire_gun() {
+	Mesh const &mesh = chicken_meshes->lookup("Impact");
+
+		Scene::Transform *transform = new Scene::Transform();
+		transform->position = glm::vec3(camera->transform->position.x, impact->position.y, camera->transform->position.z - 3);
+		transform->scale = impact->scale;
+		transform->rotation = impact->rotation;
+
+		scene.drawables.emplace_back(Scene::Drawable(transform));
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+
+		drawable.pipeline.vao = chicken_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+		// check for hit
+		if (dist_sqr(transform->position.x, transform->position.z, chicken->position.x, chicken->position.z) < 0.5f) {
+			hits++;
+		}
+		gunshots++;
+}
+
 Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("dusty-floor.opus"));
 });
@@ -46,6 +78,7 @@ PlayMode::PlayMode() : scene(*chicken_scene) {
 		if (transform.name == "Chicken") chicken = &transform;
 		else if (transform.name == "Gun") gun = &transform;
 		else if (transform.name == "Wall") wall = &transform;
+		else if (transform.name == "Impact") impact = &transform;
 	}
 	
 	//get pointer to camera for convenience:
@@ -74,6 +107,9 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		} else if (evt.key.keysym.sym == SDLK_s) {
 			down.downs += 1;
 			down.pressed = true;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_SPACE) {
+			space_pressed = true;
 			return true;
 		}
 	} else if (evt.type == SDL_KEYUP) {
@@ -126,11 +162,41 @@ void PlayMode::update(float elapsed) {
 		Sound::listener.set_position_right(frame_at, frame_right, 1.0f / 60.0f);
 	}
 
+	{ // fire gun
+		if (space_pressed) {
+		fire_gun();
+	}
+	}
+
+	{ // move chicken
+		glm::vec3 &pos = chicken->position;
+		if (!(-17.f <= pos.x && pos.x <= 17.f && -6.f <= pos.z && pos.z <= 12.f)) {
+			chicken_dir += 180;
+			chicken_dir %= 360;
+			pos.x = std::clamp(pos.x, -16.5f, 16.5f);
+			pos.z = std::clamp(pos.z, -5.5f, 11.5f);
+		} else if (std::rand() % 20 == 0) {
+			chicken_dir = rand() % 360;
+		}
+
+		constexpr float ChickenSpeed = 13.f;
+		glm::vec2 move = glm::vec2(0.0f);
+		move.x = std::cos((float)chicken_dir / (std::atan(1)*8.f));
+		move.y = std::sin((float)chicken_dir / (std::atan(1)*8.f));
+
+		//make it so that moving diagonally doesn't go faster:
+		move = glm::normalize(move) * ChickenSpeed * elapsed;
+
+		pos.x += move.x;
+		pos.z += move.y;
+	}
+
 	//reset button press counters:
 	left.downs = 0;
 	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+	space_pressed = false;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -172,6 +238,24 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		float ofs = 2.0f / drawable_size.y;
 		lines.draw_text("WASD moves player; space fires the gun;",
 			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+
+		lines.draw_text("Shots: " + std::to_string(gunshots),
+			glm::vec3(-aspect + 0.1f * H, 0.9 - 0.1f * H, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		lines.draw_text("Shots: " + std::to_string(gunshots),
+			glm::vec3(-aspect + 0.1f * H + ofs, 0.9 - 0.1f * H + ofs, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+
+		lines.draw_text("Hits: " + std::to_string(hits),
+			glm::vec3(-aspect + 0.1f * H, 0.77 - 0.1f * H, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		lines.draw_text("Hits: " + std::to_string(hits),
+			glm::vec3(-aspect + 0.1f * H + ofs, 0.77 - 0.1f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 	}

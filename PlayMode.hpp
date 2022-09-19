@@ -25,12 +25,23 @@ struct PlayMode : Mode {
 		uint8_t pressed = 0;
 	} left, right, down, up;
 
+	bool space_pressed = false;
+
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
 
 	Scene::Transform *chicken = nullptr;
 	Scene::Transform *gun = nullptr;
 	Scene::Transform *wall = nullptr;
+	Scene::Transform *impact = nullptr;
+
+	// angle between 0 and 360 degrees,
+	// mathematical
+	size_t chicken_dir = 0;
+	size_t hits = 0;
+	size_t gunshots = 0;
+
+	void fire_gun();
 	
 	//camera:
 	Scene::Camera *camera = nullptr;
