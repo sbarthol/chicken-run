@@ -20,10 +20,12 @@ Load< MeshBuffer > chicken_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 });
 
 Load< Sound::Sample > explosion_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	// Created on https://jfxr.frozenfractal.com/ by taking inspiration from the "explosion" template
 	return new Sound::Sample(data_path("explosion.wav"));
 });
 
 Load< Sound::Sample > hit_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	// Created on https://jfxr.frozenfractal.com/ by taking inspiration from the "hit/hurt" template
 	return new Sound::Sample(data_path("hit.wav"));
 });
 
