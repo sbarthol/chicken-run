@@ -19,6 +19,14 @@ Load< MeshBuffer > chicken_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	return ret;
 });
 
+Load< Sound::Sample > explosion_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("explosion.wav"));
+});
+
+Load< Sound::Sample > hit_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("hit.wav"));
+});
+
 Load< Scene > chicken_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("chicken.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		if (mesh_name == "Impact") {
@@ -64,7 +72,9 @@ void PlayMode::fire_gun() {
 		// check for hit
 		if (dist_sqr(transform->position.x, transform->position.z, chicken->position.x, chicken->position.z) < 0.5f) {
 			hits++;
+			Sound::play(*hit_sample);
 		}
+		Sound::play(*explosion_sample);
 		gunshots++;
 }
 
