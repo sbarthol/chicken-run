@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# Chicken Run
 
-Author: (TODO: your name)
+Author: Sacha Bartholme
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: Inpsired by the 2000 stop-motion animated comedy film "Chicken Run", a hunter needs to shoot down a moving chicken.
 
 Screen Shot:
 
@@ -10,6 +10,6 @@ Screen Shot:
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+WASD moves the gun/player. Space fires the gun.
 
 This game was built with [NEST](NEST.md).
